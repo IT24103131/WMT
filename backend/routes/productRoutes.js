@@ -1,9 +1,18 @@
 const express = require('express');
 const Product = require('../models/Product');
 const { protect, admin } = require('../middleware/auth');
-const upload = require('../middleware/upload');
 
 const router = express.Router();
+
+// Helper to normalize product fields
+const normalize = (p) => {
+    const obj = p.toObject ? p.toObject() : p;
+    obj.size = obj.size || obj.sizes || [];
+    obj.imageUrl = obj.imageUrl || obj.images?.[0]?.url || obj.images?.[0] || '';
+    obj.countInStock = obj.countInStock ?? obj.stock ?? 0;
+    obj.category = obj.category?.toString() || '';
+    return obj;
+};
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -11,7 +20,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const products = await Product.find({});
-        res.json(products);
+        res.json(products.map(normalize));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -24,7 +33,7 @@ router.get('/:id', async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
         if (product) {
-            res.json(product);
+            res.json(normalize(product));
         } else {
             res.status(404).json({ message: 'Product not found' });
         }
@@ -36,14 +45,9 @@ router.get('/:id', async (req, res) => {
 // @desc    Create a product
 // @route   POST /api/products
 // @access  Private/Admin
-router.post('/', protect, admin, upload.single('image'), async (req, res) => {
+router.post('/', protect, admin, async (req, res) => {
     try {
-        const { name, price, size, category, countInStock, description } = req.body;
-        let imageUrl = '';
-
-        if (req.file) {
-            imageUrl = req.file.path; // Cloudinary returns the full URL in path
-        }
+        const { name, price, size, category, countInStock, description, imageUrl } = req.body;
 
         const product = new Product({
             name,
@@ -51,8 +55,8 @@ router.post('/', protect, admin, upload.single('image'), async (req, res) => {
             description,
             size: typeof size === 'string' ? size.split(',').map(s => s.trim()) : size,
             category,
-            countInStock,
-            imageUrl,
+            countInStock: countInStock || 0,
+            imageUrl: imageUrl || 'https://via.placeholder.com/300x300?text=No+Image',
         });
 
         const createdProduct = await product.save();
@@ -65,9 +69,9 @@ router.post('/', protect, admin, upload.single('image'), async (req, res) => {
 // @desc    Update a product
 // @route   PUT /api/products/:id
 // @access  Private/Admin
-router.put('/:id', protect, admin, upload.single('image'), async (req, res) => {
+router.put('/:id', protect, admin, async (req, res) => {
     try {
-        const { name, price, size, category, description, countInStock } = req.body;
+        const { name, price, size, category, description, countInStock, imageUrl } = req.body;
         const product = await Product.findById(req.params.id);
 
         if (product) {
@@ -75,15 +79,12 @@ router.put('/:id', protect, admin, upload.single('image'), async (req, res) => {
             product.price = price || product.price;
             product.description = description || product.description;
             product.countInStock = countInStock !== undefined ? countInStock : product.countInStock;
-            if (size) product.size = typeof size === 'string' ? size.split(',').map(s => s.trim()) : size;
             product.category = category || product.category;
-
-            if (req.file) {
-                product.imageUrl = req.file.path; // Cloudinary returns the full URL in path
-            }
+            if (size) product.size = typeof size === 'string' ? size.split(',').map(s => s.trim()) : size;
+            if (imageUrl) product.imageUrl = imageUrl;
 
             const updatedProduct = await product.save();
-            res.json(updatedProduct);
+            res.json(normalize(updatedProduct));
         } else {
             res.status(404).json({ message: 'Product not found' });
         }
@@ -98,9 +99,8 @@ router.put('/:id', protect, admin, upload.single('image'), async (req, res) => {
 router.delete('/:id', protect, admin, async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
-
         if (product) {
-            await product.deleteOne(); // updated method in mongoose 7+
+            await product.deleteOne();
             res.json({ message: 'Product removed' });
         } else {
             res.status(404).json({ message: 'Product not found' });

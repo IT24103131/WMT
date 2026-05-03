@@ -19,7 +19,6 @@ const productSchema = new mongoose.Schema({
     },
     imageUrl: {
         type: String,
-<<<<<<< HEAD
         required: false,
         default: 'https://via.placeholder.com/300x300?text=No+Image',
     },
@@ -28,9 +27,6 @@ const productSchema = new mongoose.Schema({
     },
     countInStock: {
         type: Number, default: 0
-=======
-        required: true,
->>>>>>> fa8606cfae5a9246ecab0a34b5f97cffb6f21ae3
     },
 }, {
     timestamps: true,

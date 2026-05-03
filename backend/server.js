@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
-=======
->>>>>>> fa8606cfae5a9246ecab0a34b5f97cffb6f21ae3
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -18,14 +15,8 @@ const cartRoutes = require('./routes/cartRoutes');
 // Load env vars
 
 // Connect to database
-<<<<<<< HEAD
 const connectDB = require('./config/db');
 connectDB();
-=======
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log(err));
->>>>>>> fa8606cfae5a9246ecab0a34b5f97cffb6f21ae3
 
 const app = express();
 
